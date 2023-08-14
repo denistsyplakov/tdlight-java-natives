@@ -35,9 +35,6 @@ jobs:
         with:
           java-version: 17
           distribution: temurin
-          server-id: mchv-snapshot-distribution
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
           cache: 'maven'
       - name: Setup Java (Release)
         if: github.ref != 'refs/heads/develop'
@@ -45,9 +42,6 @@ jobs:
         with:
           java-version: 17
           distribution: temurin
-          server-id: mchv-release-distribution
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
           cache: 'maven'
       - name: Set up Maven
         uses: stCarolas/setup-maven@v4.5
@@ -87,73 +81,4 @@ jobs:
         with:
           name: tdlight-api-${{env.REVISION}}-legacy.jar
           path: api/target-legacy/tdlight-api-${{env.REVISION}}-legacy.jar
-      - name: Deploy to Maven (Snapshot)
-        if: github.ref != 'refs/heads/master'
-        shell: bash
-        run: |
-          set -xeo pipefail
-          echo "REVISION: $REVISION"
-
-          echo "Building standard package"
-          mvn -B -f api/pom.xml clean package deploy -Drevision="$REVISION"
-          echo "Deploying legacy package"
-          mvn -B -f api/pom.xml clean package -Dlegacy=true -Drevision="$REVISION"
-          mvn -B org.apache.maven.plugins:maven-deploy-plugin:3.1.1:deploy-file -Durl=https://mvn.mchv.eu/repository/mchv-snapshot \
-                                                                            -DrepositoryId=mchv-snapshot-distribution \
-                                                                            -Dfile=api/target-legacy/tdlight-api-$REVISION-legacy.jar \
-                                                                            -Dpackaging=pom \
-                                                                            -DgroupId=it.tdlight \
-                                                                            -DartifactId=tdlight-api \
-                                                                            -Dversion=$REVISION \
-                                                                            -Drevision=$REVISION \
-                                                                            -Dclassifier=legacy \
-                                                                            -Dlegacy=true
-          echo "Done."
-        env:
-          MAVEN_USERNAME: ${{ secrets.MCHV_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MCHV_TOKEN }}
-      - name: Deploy to Maven (Release)
-        if: github.ref == 'refs/heads/master'
-        shell: bash
-        run: |
-          set -xeo pipefail
-          echo "REVISION: $REVISION"
-
-          echo "Deploying standard package"
-          mvn -B -f api/pom.xml clean package deploy -Drevision="$REVISION"
-          
-          echo "Deploying legacy package"
-          mvn -B -f api/pom.xml clean package -Dlegacy=true -Drevision="$REVISION"
-          mvn -B org.apache.maven.plugins:maven-deploy-plugin:3.1.1:deploy-file -Durl=https://mvn.mchv.eu/repository/mchv \
-                                                                            -DrepositoryId=mchv-release-distribution \
-                                                                            -Dfile=api/target-legacy/tdlight-api-$REVISION-legacy.jar \
-                                                                            -Dpackaging=pom \
-                                                                            -DgroupId=it.tdlight \
-                                                                            -DartifactId=tdlight-api \
-                                                                            -Dversion=$REVISION \
-                                                                            -Drevision=$REVISION \
-                                                                            -Dclassifier=legacy \
-                                                                            -Dlegacy=true
-          
-          
-          echo "Deploying docs"
-          cd "./api/target/apidocs"
-          find . -name '*.html' -exec sed -i -r 's/<\/title>/<\/title>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>\n\t#memberSummary_tabpanel{overflow-x: auto;}\n\tli.blockList{overflow-x: auto;}\n\ttd.colLast div{max-width:30vw;}\n\t#search{width: 400px;max-width: 65vw;}\n\t.title,.subTitle,pre,.inheritance,h1,h2,h3,h4,h5,.memberSummary,.memberSignature,.typeSummary,.blockList,.contentContainer{white-space:normal;word-break:break-word;}\n\tul{padding-left:10px}\n<\/style>/' {} \;
-          git config --global init.defaultBranch master
-          git init
-          git checkout -b "tdlight"
-          git remote add origin "https://${DOCS_DEPLOY_USERNAME}:${DOCS_DEPLOY_PASSWORD}@git.ignuranza.net/tdlight-team/tdlight-docs"
-          git config user.email "andrea@warp.ovh"
-          git config user.name "Andrea Cavalli"
-          git fetch --all
-          git reset --soft "origin/tdlight" || true
-          git add -A
-          git commit -m "Update javadocs"
-          git push --set-upstream origin "tdlight"
-          echo "Done."
-        env:
-          MAVEN_USERNAME: ${{ secrets.MCHV_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MCHV_TOKEN }}
-          DOCS_DEPLOY_USERNAME: ${{ secrets.DOCS_DEPLOY_USERNAME }}
-          DOCS_DEPLOY_PASSWORD: ${{ secrets.DOCS_DEPLOY_PASSWORD }}
 

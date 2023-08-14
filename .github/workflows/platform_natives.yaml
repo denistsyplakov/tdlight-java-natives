@@ -95,9 +95,6 @@ jobs:
         with:
           java-version: 11
           distribution: temurin
-          server-id: mchv-snapshot-distribution
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
           cache: 'maven'
       - name: Setup Java (Release)
         if: github.ref != 'refs/heads/develop'
@@ -105,9 +102,6 @@ jobs:
         with:
           java-version: 11
           distribution: temurin
-          server-id: mchv-release-distribution
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
           cache: 'maven'
 
       - name: Setup PHP with Readline extension
@@ -208,75 +202,3 @@ jobs:
         with:
           name: tdlight-natives-${{env.REVISION}}-${{env.TYPE}}.jar
           path: natives/target-${{env.TYPE}}/tdlight-natives-${{env.REVISION}}-${{env.TYPE}}.jar
-      - name: Deploy to Maven (Snapshot)
-        if: github.ref == 'refs/heads/develop'
-        shell: bash
-        run: |
-          set -xeo pipefail
-          echo "REVISION: $REVISION"
-          echo "TYPE: $TYPE"
-          
-          mvn -B -f natives/pom.xml -Drevision="$REVISION" -Dnative.type.classifier="$TYPE" clean package
-          mvn -B org.apache.maven.plugins:maven-deploy-plugin:3.1.1:deploy-file -Durl=https://mvn.mchv.eu/repository/mchv-snapshot \
-                                                                            -DrepositoryId=mchv-snapshot-distribution \
-                                                                            -Dfile=natives/target-$TYPE/tdlight-natives-$REVISION-$TYPE.jar \
-                                                                            -Dpackaging=pom \
-                                                                            -DgroupId=it.tdlight \
-                                                                            -DartifactId=tdlight-natives \
-                                                                            -Dversion=$REVISION \
-                                                                            -Drevision=$REVISION \
-                                                                            -Dclassifier=$TYPE \
-                                                                            -Dnative.type.classifier="$TYPE"
-          if [[ "$TYPE" == "linux_amd64_ssl1" ]]; then
-            mvn -B org.apache.maven.plugins:maven-deploy-plugin:3.1.1:deploy-file -Durl=https://mvn.mchv.eu/repository/mchv-snapshot \
-                                                                              -DrepositoryId=mchv-snapshot-distribution \
-                                                                              -Dfile=natives/.ci-friendly-pom.xml \
-                                                                              -Dpackaging=pom \
-                                                                              -DgroupId=it.tdlight \
-                                                                              -DartifactId=tdlight-natives \
-                                                                              -Dversion=$REVISION \
-                                                                              -Drevision=$REVISION \
-                                                                              -Dnative.type.classifier="$TYPE"
-          fi
-          
-          echo "Done."
-          exit 0
-        env:
-          MAVEN_USERNAME: ${{ secrets.MCHV_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MCHV_TOKEN }}
-      - name: Deploy to Maven (Release)
-        if: github.ref == 'refs/heads/master'
-        shell: bash
-        run: |
-          set -xeo pipefail
-          echo "REVISION: $REVISION"
-          echo "TYPE: $TYPE"
-          
-          mvn -B -f natives/pom.xml -Drevision="$REVISION" -Dnative.type.classifier="$TYPE" clean package
-          mvn -B org.apache.maven.plugins:maven-deploy-plugin:3.1.1:deploy-file -Durl=https://mvn.mchv.eu/repository/mchv \
-                                                                            -DrepositoryId=mchv-release-distribution \
-                                                                            -Dfile=natives/target-$TYPE/tdlight-natives-$REVISION-$TYPE.jar \
-                                                                            -Dpackaging=pom \
-                                                                            -DgroupId=it.tdlight \
-                                                                            -DartifactId=tdlight-natives \
-                                                                            -Dversion=$REVISION \
-                                                                            -Drevision=$REVISION \
-                                                                            -Dclassifier=$TYPE \
-                                                                            -Dnative.type.classifier="$TYPE"
-          if [[ "$TYPE" == "linux_amd64_ssl1" ]]; then
-            mvn -B org.apache.maven.plugins:maven-deploy-plugin:3.1.1:deploy-file -Durl=https://mvn.mchv.eu/repository/mchv \
-                                                                              -DrepositoryId=mchv-release-distribution \
-                                                                              -Dfile=natives/.ci-friendly-pom.xml \
-                                                                              -Dpackaging=pom \
-                                                                              -DgroupId=it.tdlight \
-                                                                              -DartifactId=tdlight-natives \
-                                                                              -Dversion=$REVISION \
-                                                                              -Drevision=$REVISION \
-                                                                              -Dnative.type.classifier="$TYPE"
-          fi
-          
-          echo "Done."
-          exit 0
-        env:
-          MAVEN_USERNAME: ${{ secrets.MCHV_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MCHV_TOKEN }}
